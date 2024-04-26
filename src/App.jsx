@@ -1,15 +1,17 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback } from "react";
 
-import Places from './components/Places.jsx';
-import Modal from './components/Modal.jsx';
-import DeleteConfirmation from './components/DeleteConfirmation.jsx';
-import logoImg from './assets/logo.png';
-import AvailablePlaces from './components/AvailablePlaces.jsx';
+import Places from "./components/Places.jsx";
+import Modal from "./components/Modal.jsx";
+import DeleteConfirmation from "./components/DeleteConfirmation.jsx";
+import logoImg from "./assets/logo.png";
+import AvailablePlaces from "./components/AvailablePlaces.jsx";
+import { updateUserPlaces } from "./http.js";
 
 function App() {
   const selectedPlace = useRef();
 
   const [userPlaces, setUserPlaces] = useState([]);
+  const [errorUpdatingUserPlaces, setErrorUpdatingUserPlaces] = useState(null);
 
   const [modalIsOpen, setModalIsOpen] = useState(false);
 
@@ -22,7 +24,7 @@ function App() {
     setModalIsOpen(false);
   }
 
-  function handleSelectPlace(selectedPlace) {
+  async function handleSelectPlace(selectedPlace) {
     setUserPlaces((prevPickedPlaces) => {
       if (!prevPickedPlaces) {
         prevPickedPlaces = [];
@@ -32,6 +34,13 @@ function App() {
       }
       return [selectedPlace, ...prevPickedPlaces];
     });
+    try {
+      await updateUserPlaces(...userPlaces, selectedPlace);
+    } catch (error) {
+      setErrorUpdatingUserPlaces({
+        message: error.message || "Could not update user data",
+      });
+    }
   }
 
   const handleRemovePlace = useCallback(async function handleRemovePlace() {
@@ -42,11 +51,19 @@ function App() {
     setModalIsOpen(false);
   }, []);
 
+  function handleError() {
+    setErrorUpdatingUserPlaces(null);
+  }
+
   return (
     <>
+      <Modal open={errorUpdatingUserPlaces} onClose={handleError}>
+        <Error title="Error" message={errorUpdatingUserPlaces} />
+      </Modal>
       <Modal open={modalIsOpen} onClose={handleStopRemovePlace}>
         <DeleteConfirmation
           onCancel={handleStopRemovePlace}
+          message="Are you sure you want to remove this place?"
           onConfirm={handleRemovePlace}
         />
       </Modal>
